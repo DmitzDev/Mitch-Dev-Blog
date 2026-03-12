@@ -19,7 +19,11 @@ export function BlogDetail() {
   const [newComment, setNewComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [liked, setLiked] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [relatedPosts, setRelatedPosts] = useState<Post[]>([]);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [email, setEmail] = useState("");
+  const [submittingNews, setSubmittingNews] = useState(false);
   
   const hasCheckedView = useRef(false);
 
@@ -36,32 +40,24 @@ export function BlogDetail() {
           const postData = { ...data[postId], id: postId } as Post;
           setPost(postData);
 
-          if (!hasCheckedView.current) {
-            hasCheckedView.current = true;
-            if (user) {
-              const viewRef = ref(db, `unique_views/${postId}/${user.uid}`);
-              const viewSnap = await get(viewRef);
-              if (!viewSnap.exists()) {
-                await runTransaction(ref(db, `posts/${postId}/views`), (curr) => (curr || 0) + 1);
-                await set(viewRef, true);
-              }
-            } else {
-              const storageKey = `g_viewed_${postId}`;
-              if (!localStorage.getItem(storageKey)) {
-                await runTransaction(ref(db, `posts/${postId}/views`), (curr) => (curr || 0) + 1);
-                localStorage.setItem(storageKey, 'true');
-              }
-            }
+          if (user) {
+            const likedSnap = await get(ref(db, `likes/${postId}/${user.uid}`));
+            setLiked(likedSnap.exists());
+
+            const BookSnap = await get(ref(db, `bookmarks/${user.uid}/${postId}`));
+            setBookmarked(BookSnap.exists());
           }
 
-          const commentsQuery = query(ref(db, "comments"), orderByChild("postId"), equalTo(postId));
-          const commentsSnap = await get(commentsQuery);
-          if (commentsSnap.exists()) {
-            const raw = commentsSnap.val();
-            const list = Object.keys(raw)
-              .map(k => ({ ...raw[k], id: k }))
-              .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            setComments(list);
+          // Fetch Related Posts
+          const relatedQuery = query(ref(db, "posts"), orderByChild("category"), equalTo(postData.category));
+          const relatedSnap = await get(relatedQuery);
+          if (relatedSnap.exists()) {
+            const rData = relatedSnap.val();
+            const rList = Object.keys(rData)
+              .map(k => ({ ...rData[k], id: k }))
+              .filter(p => p.id !== postId)
+              .slice(0, 3);
+            setRelatedPosts(rList);
           }
         }
       } catch (error) { console.error(error); } finally { setLoading(false); }
@@ -70,13 +66,62 @@ export function BlogDetail() {
   }, [slug, user]);
 
   const handleLike = async () => {
-    if (!user) { alert("Please login to react!"); return; }
-    if (!post || liked) return;
+    if (!user) { alert("Universe entry required: Please sign in to react."); return; }
+    if (!post) return;
+    
     try {
-      await runTransaction(ref(db, `posts/${post.id}/likes`), (curr) => (curr || 0) + 1);
-      setPost({ ...post, likes: (post.likes || 0) + 1 });
-      setLiked(true);
-    } catch (e: any) { alert("Action failed."); }
+      const likeRef = ref(db, `likes/${post.id}/${user.uid}`);
+      const likedState = !liked;
+      
+      await runTransaction(ref(db, `posts/${post.id}/likes`), (curr) => {
+        if (likedState) return (curr || 0) + 1;
+        return Math.max(0, (curr || 0) - 1);
+      });
+
+      if (likedState) {
+        await set(likeRef, true);
+      } else {
+        await set(likeRef, null);
+      }
+      
+      setLiked(likedState);
+      setPost({ ...post, likes: likedState ? (post.likes || 0) + 1 : Math.max(0, (post.likes || 0) - 1) });
+    } catch (e: any) { console.error(e); }
+  };
+
+  const handleBookmark = async () => {
+    if (!user) { alert("Vault access denied: Please sign in to save archives."); return; }
+    if (!post) return;
+    try {
+      const bRef = ref(db, `bookmarks/${user.uid}/${post.id}`);
+      const newState = !bookmarked;
+      if (newState) {
+        await set(bRef, {
+          postId: post.id,
+          title: post.title,
+          slug: post.slug,
+          coverImage: post.coverImage,
+          category: post.category,
+          bookmarkedAt: Date.now()
+        });
+      } else {
+        await set(bRef, null);
+      }
+      setBookmarked(newState);
+    } catch (e) { console.error(e); }
+  };
+
+  const handleNewsletter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !email.includes('@')) return;
+    setSubmittingNews(true);
+    try {
+      const newRef = push(ref(db, "newsletter"));
+      await set(newRef, { email: email.trim(), createdAt: Date.now() });
+      alert("Dispatch Enrollment Successful: You are now subscribed to the ledger abstracts.");
+      setEmail("");
+    } catch (e) { alert("Enrollment failure: Ledger rejection."); }
+    finally { setSubmittingNews(false); }
   };
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
@@ -169,9 +214,13 @@ export function BlogDetail() {
               <button className="w-16 h-16 rounded-full glass flex items-center justify-center text-slate-400 hover:text-primary transition-all">
                 <Share2 size={20} />
               </button>
-              <button className="w-16 h-16 rounded-full glass flex items-center justify-center text-slate-400 hover:text-primary transition-all">
-                <Bookmark size={20} />
-              </button>
+              <motion.button 
+                whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                onClick={handleBookmark}
+                className={`w-16 h-16 rounded-full glass flex items-center justify-center transition-all ${bookmarked ? 'bg-primary text-white' : 'text-slate-400 hover:text-primary'}`}
+              >
+                {bookmarked ? <BookmarkCheck size={20} /> : <Bookmark size={20} />}
+              </motion.button>
             </div>
           </div>
 
@@ -181,6 +230,23 @@ export function BlogDetail() {
               <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary flex items-center gap-3"><MessageCircle size={14} /> Discussions</span>
               <h3 className="text-6xl font-serif font-black text-slate-900 dark:text-white leading-none">Voices.</h3>
             </div>
+
+            {/* Related Artifacts */}
+            {relatedPosts.length > 0 && (
+              <div className="pt-24 space-y-12">
+                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-300">Synchronous Artifacts</span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {relatedPosts.map(p => (
+                    <Link key={p.id} to={`/blog/${p.slug}`} className="group space-y-4">
+                      <div className="aspect-[4/3] rounded-3xl overflow-hidden">
+                        <img src={p.coverImage} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                      </div>
+                      <h4 className="font-serif font-black text-slate-900 dark:text-white line-clamp-2 group-hover:text-primary transition-colors italic">"{p.title}"</h4>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {user ? (
               <form onSubmit={handleCommentSubmit} className="space-y-8 premium-card p-12 bg-slate-50/50 dark:bg-slate-900/30">
@@ -234,10 +300,16 @@ export function BlogDetail() {
                 <div className="relative z-10 space-y-6">
                   <h3 className="text-4xl font-serif font-black leading-none">MDev<br/>Bulletin.</h3>
                   <p className="text-primary-100 leading-relaxed italic opacity-80">Weekly architectural abstracts curated for the modern creator.</p>
-                  <div className="space-y-4">
-                    <input type="email" placeholder="Email Address" className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-sm outline-none placeholder:text-white/40 focus:bg-white/20 transition-all font-bold" />
-                    <button className="btn-primary bg-white text-primary w-full py-5 text-[10px]">Enroll Now</button>
-                  </div>
+                  <form onSubmit={handleNewsletter} className="space-y-4">
+                    <input 
+                      type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Email Address" 
+                      className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-sm outline-none placeholder:text-white/40 focus:bg-white/20 transition-all font-bold" 
+                    />
+                    <button disabled={submittingNews} className="btn-primary bg-white text-primary w-full py-5 text-[10px] uppercase font-black tracking-widest">
+                      {submittingNews ? "Enrolling..." : "Enroll Now"}
+                    </button>
+                  </form>
                 </div>
              </div>
              

@@ -7,7 +7,7 @@ export function Layout() {
   const location = useLocation();
   
   return (
-    <div className="min-h-screen bg-white dark:bg-[#020617] transition-colors duration-500 relative selection:bg-primary/20">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-[#020617] transition-colors duration-500 relative selection:bg-primary/20">
       {/* Dynamic Background Glows */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 dark:bg-primary/10 rounded-full blur-[120px] animate-pulse" />
@@ -16,7 +16,7 @@ export function Layout() {
 
       <Navbar />
       
-      <main className="relative z-10 pt-20">
+      <main className="relative z-10 pt-20 flex-grow">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}

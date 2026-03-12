@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sun, Moon, LogIn, LayoutDashboard, LogOut, Search } from "lucide-react";
+import { Menu, X, Sun, Moon, LogIn, LayoutDashboard, LogOut, Search, Bookmark } from "lucide-react";
 import { useTheme } from "./ThemeProvider";
 
 export function Navbar() {
@@ -39,16 +39,16 @@ export function Navbar() {
 
           <div className="hidden md:flex items-center gap-12">
             {navLinks.map((link) => (
-              <Link 
-                key={link.name} to={link.path} 
+              <Link
+                key={link.name} to={link.path}
                 className={`text-[11px] font-black uppercase tracking-[0.2em] transition-all hover:text-primary ${location.pathname === link.path ? 'text-primary' : 'text-slate-400'}`}
               >
                 {link.name}
               </Link>
             ))}
-            
+
             <div className="flex items-center gap-6 pl-6 border-l border-slate-200 dark:border-slate-800">
-              <button 
+              <button
                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                 className="text-slate-400 hover:text-primary transition-colors"
                 aria-label="Toggle theme"
@@ -59,6 +59,9 @@ export function Navbar() {
               <AnimatePresence mode="wait">
                 {user ? (
                   <div className="flex items-center gap-6">
+                    <Link to="/admin/bookmarks" className="text-slate-400 hover:text-primary transition-colors">
+                      <Bookmark size={18} />
+                    </Link>
                     <Link to="/admin" className="text-slate-400 hover:text-primary transition-colors">
                       <LayoutDashboard size={18} />
                     </Link>
@@ -85,7 +88,7 @@ export function Navbar() {
       {/* Mobile Menu */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
             className="absolute top-24 left-6 right-6 p-8 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-3xl md:hidden flex flex-col gap-8 text-center"
           >
@@ -94,9 +97,24 @@ export function Navbar() {
                 {link.name}
               </Link>
             ))}
-            {!user && (
+            {user ? (
+              <>
+                <Link to="/admin/bookmarks" onClick={() => setIsOpen(false)} className="text-xl font-serif font-black text-slate-900 dark:text-white">
+                  Manuscript Vault
+                </Link>
+                <Link to="/admin" onClick={() => setIsOpen(false)} className="text-xl font-serif font-black text-slate-900 dark:text-white">
+                  Studio Dashboard
+                </Link>
+                <button
+                  onClick={() => { logout(); setIsOpen(false); }}
+                  className="bg-rose-500 text-white py-4 rounded-full font-black uppercase tracking-widest text-[10px]"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
               <Link to="/login" onClick={() => setIsOpen(false)} className="bg-primary text-white py-4 rounded-full font-black uppercase tracking-widest text-[10px]">
-                Authentication
+                Sign In
               </Link>
             )}
           </motion.div>

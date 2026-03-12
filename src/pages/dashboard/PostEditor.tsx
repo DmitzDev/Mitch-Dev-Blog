@@ -24,8 +24,24 @@ export function PostEditor() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEditing);
 
+  const [categories, setCategories] = useState<{ id: string, name: string }[]>([]);
+
   useEffect(() => {
-    const fetchPost = async () => {
+    const fetchPostAndCats = async () => {
+      // Fetch categories
+      try {
+        const catsRef = ref(db, "categories");
+        const snapshot = await get(catsRef);
+        if (snapshot.exists()) {
+          const raw = snapshot.val();
+          setCategories(Object.keys(raw).map(k => ({ id: k, name: raw[k].name })));
+        } else {
+          // Fallback if DB is empty
+          const defaults = ['Technology', 'Programming', 'Travel', 'Lifestyle', 'Gaming'];
+          setCategories(defaults.map((name, i) => ({ id: `default-${i}`, name })));
+        }
+      } catch (e) { console.error(e); }
+
       if (!isEditing || !id) return;
       try {
         const snapshot = await get(ref(db, `posts/${id}`));
@@ -40,7 +56,7 @@ export function PostEditor() {
         }
       } catch (error) { console.error(error); } finally { setFetching(false); }
     };
-    fetchPost();
+    fetchPostAndCats();
   }, [id, isEditing]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,8 +106,8 @@ export function PostEditor() {
   return (
     <div className="max-w-5xl mx-auto px-6 py-24">
       <Helmet><title>{isEditing ? "Edit" : "New"} Entry | MDev.</title></Helmet>
-      
-      <motion.div 
+
+      <motion.div
         initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
         className="flex items-center justify-between mb-16"
       >
@@ -108,7 +124,7 @@ export function PostEditor() {
           {/* Main Controls */}
           <div className="lg:col-span-8 space-y-12">
             <div className="space-y-4">
-               <input
+              <input
                 type="text" required value={title} onChange={(e) => setTitle(e.target.value)}
                 className="w-full bg-transparent border-none text-5xl md:text-7xl font-serif font-black text-slate-900 dark:text-white placeholder:text-slate-100 dark:placeholder:text-slate-800 outline-none p-0 leading-tight"
                 placeholder="Entry Title..."
@@ -145,13 +161,19 @@ export function PostEditor() {
             <div className="space-y-8 bg-slate-50/50 dark:bg-slate-900/50 p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800">
               <div className="space-y-4">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">Category</label>
-                <input type="text" required value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-white dark:bg-slate-800 rounded-2xl px-6 py-4 outline-none font-bold text-xs border border-slate-100 dark:border-slate-700/50" placeholder="e.g. Design" />
+                <select
+                  required value={category} onChange={(e) => setCategory(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-800 rounded-2xl px-6 py-4 outline-none font-bold text-xs border border-slate-100 dark:border-slate-700/50 appearance-none cursor-pointer"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                </select>
               </div>
               <div className="space-y-4">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">Tags</label>
                 <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} className="w-full bg-white dark:bg-slate-800 rounded-2xl px-6 py-4 outline-none font-bold text-xs border border-slate-100 dark:border-slate-700/50" placeholder="tag1, tag2..." />
               </div>
-              
+
               <div className="pt-8 flex flex-col gap-4">
                 <button
                   type="submit" disabled={loading}

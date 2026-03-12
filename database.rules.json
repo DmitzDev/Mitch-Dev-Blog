@@ -4,7 +4,7 @@
       ".read": true,
       ".indexOn": ["authorId", "slug", "publishedAt", "createdAt"],
       "$postId": {
-        ".write": "auth != null && (!data.exists() || data.child('authorId').val() == auth.uid)",
+        ".write": "auth != null && (!data.exists() || data.child('authorId').val() == auth.uid || root.child('users').child(auth.uid).child('role').val() == 'admin')",
         "likes": { ".write": "auth != null" },
         "comments": { ".write": "auth != null" },
         "views": { ".write": true }
@@ -26,6 +26,38 @@
       "$commentId": {
         ".write": "auth != null",
         ".validate": "newData.hasChildren(['postId', 'userId', 'content', 'createdAt'])"
+      }
+    },
+    "users": {
+      ".read": true,
+      "$uid": {
+        ".write": "auth != null && (auth.uid == $uid || root.child('users').child(auth.uid).child('role').val() == 'admin')",
+        ".read": true
+      }
+    },
+    "categories": {
+      ".read": true,
+      ".write": "auth != null && (root.child('users').child(auth.uid).child('role').val() == 'admin')"
+    },
+    "likes": {
+      "$postId": {
+        ".read": true,
+        "$userId": {
+          ".write": "auth != null && auth.uid == $userId"
+        }
+      }
+    },
+    "bookmarks": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid"
+      }
+    },
+    "newsletter": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() == 'admin'",
+      "$id": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['email', 'createdAt'])"
       }
     }
   }

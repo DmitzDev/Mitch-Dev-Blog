@@ -5,7 +5,7 @@ import { db } from "../../firebase/config";
 import { useAuth } from "../../components/AuthProvider";
 import { Post } from "../../types";
 import { Helmet } from "react-helmet-async";
-import { FileText, Eye, Heart, MessageSquare, Plus, ArrowUpRight, ArrowRight } from "lucide-react";
+import { FileText, Eye, Heart, MessageSquare, Plus, ArrowUpRight, ArrowRight, Bookmark } from "lucide-react";
 import { motion } from "framer-motion";
 
 export function Dashboard() {
@@ -18,22 +18,30 @@ export function Dashboard() {
     const fetchDashboardData = async () => {
       if (!user) return;
       try {
-        const postsQuery = query(ref(db, "posts"), orderByChild("authorId"), equalTo(user.uid));
-        const snapshot = await get(postsQuery);
+        // Fetch User profile to check role
+        const userRef = ref(db, `users/${user.uid}`);
+        const userSnap = await get(userRef);
+        const isAdmin = userSnap.exists() && userSnap.val().role === 'admin';
 
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          const allPosts: Post[] = Object.keys(data)
-            .map(key => ({ ...data[key], id: key }))
-            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const postsRef = ref(db, "posts");
+        const postsSnap = await get(postsRef);
 
+        if (postsSnap.exists()) {
+          const data = postsSnap.val();
+          const allPosts: Post[] = Object.keys(data).map(key => ({ ...data[key], id: key }));
+
+          // Filter based on role
+          const displayedPosts = isAdmin ? allPosts : allPosts.filter(p => p.authorId === user.uid);
+          displayedPosts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+          // Global metrics for everyone, or filtered if preferred
           setStats({
             totalPosts: allPosts.length,
             totalViews: allPosts.reduce((acc, p) => acc + (p.views || 0), 0),
             totalLikes: allPosts.reduce((acc, p) => acc + (p.likes || 0), 0),
             totalComments: allPosts.reduce((acc, p) => acc + (p.comments || 0), 0)
           });
-          setRecentPosts(allPosts.slice(0, 5));
+          setRecentPosts(displayedPosts.slice(0, 5));
         }
       } catch (error) {
         console.error("Dashboard error:", error);
@@ -54,7 +62,7 @@ export function Dashboard() {
           <h1 className="text-7xl font-serif font-black text-slate-900 dark:text-white leading-none">Studio.</h1>
           <p className="text-slate-400 mt-6 font-medium italic text-lg opacity-80">Refining your creative output, {user?.displayName || "Director"}.</p>
         </motion.div>
-        
+
         <Link to="/admin/posts/new" className="btn-primary-shimmer group py-5 px-12">
           <Plus size={18} strokeWidth={3} className="group-hover:rotate-90 transition-transform duration-500" /> Start New Entry
         </Link>
@@ -65,11 +73,11 @@ export function Dashboard() {
         <StatCard title="Artifacts" value={stats.totalPosts} icon={<FileText size={20} />} color="text-indigo-500" bg="bg-indigo-50/50 dark:bg-indigo-500/10" delay={0.1} />
         <StatCard title="Views" value={stats.totalViews} icon={<Eye size={20} />} color="text-emerald-500" bg="bg-emerald-50/50 dark:bg-emerald-500/10" delay={0.2} />
         <StatCard title="Appreciation" value={stats.totalLikes} icon={<Heart size={20} />} color="text-rose-500" bg="bg-rose-50/50 dark:bg-rose-500/10" delay={0.3} />
-        <StatCard title="Discussions" value={stats.totalComments} icon={<MessageSquare size={20} />} color="text-violet-500" bg="bg-violet-50/50 dark:bg-violet-500/10" delay={0.4} />
+        <Link to="/admin/bookmarks" className="block"><StatCard title="Saved Vault" value="Audit" icon={<Bookmark size={20} />} color="text-amber-500" bg="bg-amber-50/50 dark:bg-amber-500/10" delay={0.4} /></Link>
       </div>
 
       {/* Recent Ledger */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
         className="premium-card overflow-hidden group/card"
       >
@@ -79,7 +87,7 @@ export function Dashboard() {
             View Archives <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
           </Link>
         </div>
-        
+
         <div className="overflow-x-auto">
           {loading ? (
             <div className="p-12 space-y-6 animate-pulse">
@@ -114,10 +122,10 @@ export function Dashboard() {
                     <td className="px-12 py-10 text-right">
                       <div className="flex justify-end gap-3">
                         <Link to={`/admin/posts/${post.id}/edit`} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-primary hover:text-white transition-all duration-500 shadow-sm">
-                           <FileText size={16} />
+                          <FileText size={16} />
                         </Link>
                         <Link to={`/blog/${post.slug}`} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:bg-black dark:hover:bg-white dark:hover:text-black transition-all duration-500 shadow-sm">
-                           <ArrowUpRight size={16} />
+                          <ArrowUpRight size={16} />
                         </Link>
                       </div>
                     </td>
@@ -141,7 +149,7 @@ export function Dashboard() {
 
 function StatCard({ title, value, icon, color, bg, delay }: any) {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay, duration: 0.6, ease: "easeOut" }}
       whileHover={{ y: -10, scale: 1.02 }}
       className="bg-white dark:bg-slate-900 p-10 rounded-[3rem] border border-slate-100 dark:border-slate-800/10 shadow-editorial hover:shadow-editorial-hover transition-all duration-500 group"

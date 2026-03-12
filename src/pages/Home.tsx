@@ -12,6 +12,7 @@ const ThreeHero = lazy(() => import("../components/ThreeHero"));
 
 export function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [trending, setTrending] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,9 +23,10 @@ export function Home() {
         if (snapshot.exists()) {
           const data = snapshot.val();
           const list = Object.keys(data)
-            .map(k => ({ ...data[k], id: k }))
-            .sort((a, b) => b.publishedAt - a.publishedAt);
-          setPosts(list);
+            .map(k => ({ ...data[k], id: k }));
+          
+          setPosts([...list].sort((a, b) => b.publishedAt - a.publishedAt));
+          setTrending([...list].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 4));
         }
       } catch (e) { console.error(e); } finally { setLoading(false); }
     };
@@ -126,6 +128,27 @@ export function Home() {
           </div>
         )}
       </section>
+
+      {/* Trending Ledger */}
+      {trending.length > 0 && (
+        <section className="py-24 border-y border-slate-50 dark:border-slate-800/50 overflow-hidden">
+          <div className="max-w-7xl mx-auto px-8 flex items-center gap-16 overflow-x-auto no-scrollbar pb-8">
+            <div className="shrink-0 space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Velocity</span>
+              <h2 className="text-4xl font-serif font-black italic">Trending.</h2>
+            </div>
+            {trending.map((tp, idx) => (
+              <Link key={tp.id} to={`/blog/${tp.slug}`} className="flex items-center gap-8 shrink-0 group">
+                <span className="text-6xl font-serif font-black text-slate-100 dark:text-slate-800/50">0{idx + 1}</span>
+                <div className="space-y-1 max-w-[200px]">
+                  <h4 className="font-serif font-bold text-slate-900 dark:text-white line-clamp-1 group-hover:text-primary transition-colors italic">"{tp.title}"</h4>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{tp.category}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Grid of Journal Entries */}
       <section className="py-32 bg-slate-50/50 dark:bg-slate-900/30">

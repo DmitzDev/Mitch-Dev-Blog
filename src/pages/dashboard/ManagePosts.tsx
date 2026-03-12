@@ -22,15 +22,23 @@ export function ManagePosts() {
     if (!user) return;
 
     try {
+      const userRef = ref(db, `users/${user.uid}`);
+      const userSnap = await get(userRef);
+      const isAdmin = userSnap.exists() && userSnap.val().role === 'admin';
+
       const postsRef = ref(db, "posts");
       const snapshot = await get(postsRef);
 
       if (snapshot.exists()) {
         const data = snapshot.val();
-        const postsData: Post[] = Object.keys(data)
-          .map(key => ({ ...data[key], id: key }))
-          .filter((post: Post) => post.authorId === user.uid)
-          .sort((a: Post, b: Post) => (b.createdAt || 0) - (a.createdAt || 0));
+        let postsData: Post[] = Object.keys(data).map(key => ({ ...data[key], id: key }));
+
+        // Admins see all, users see theirs
+        if (!isAdmin) {
+          postsData = postsData.filter((post: Post) => post.authorId === user.uid);
+        }
+
+        postsData.sort((a: Post, b: Post) => (b.createdAt || 0) - (a.createdAt || 0));
         setPosts(postsData);
       } else {
         setPosts([]);
@@ -49,18 +57,35 @@ export function ManagePosts() {
 
     setDeletingId(id);
     try {
-      const postRef = ref(db, `posts/${id}`);
-      await remove(postRef);
+      // 1. Redact the main artifact
+      await remove(ref(db, `posts/${id}`));
+
+      // 2. Clean up associated discussions
+      const commentsRef = ref(db, "comments");
+      const commentsSnap = await get(commentsRef);
+      if (commentsSnap.exists()) {
+        const comments = commentsSnap.val();
+        for (const cKey in comments) {
+          if (comments[cKey].postId === id) {
+            await remove(ref(db, `comments/${cKey}`));
+          }
+        }
+      }
+
+      // 3. Redact reaction and view metrics
+      await remove(ref(db, `likes/${id}`));
+      await remove(ref(db, `unique_views/${id}`));
+
       setPosts(posts.filter(post => post.id !== id));
     } catch (error) {
-      console.error("Error deleting post:", error);
-      alert("Failed to delete post.");
+      console.error("Redaction failure:", error);
+      alert("Failed to redact artifact from the ledger.");
     } finally {
       setDeletingId(null);
     }
   };
 
-  const filteredPosts = posts.filter(post => 
+  const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     post.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -75,8 +100,8 @@ export function ManagePosts() {
         <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-white">
           Manage Posts
         </h1>
-        <Link 
-          to="/admin/posts/new" 
+        <Link
+          to="/admin/posts/new"
           className="bg-black text-white dark:bg-white dark:text-black px-4 py-2 rounded-full font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
         >
           <Plus size={18} />
@@ -152,7 +177,7 @@ export function ManagePosts() {
                         <Link to={`/admin/posts/${post.id}/edit`} className="text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300 transition-colors" title="Edit">
                           <Edit size={18} />
                         </Link>
-                        <button 
+                        <button
                           onClick={() => handleDelete(post.id)}
                           disabled={deletingId === post.id}
                           className="text-red-400 hover:text-red-600 dark:hover:text-red-300 transition-colors disabled:opacity-50"
@@ -172,8 +197,8 @@ export function ManagePosts() {
             <FileText size={48} className="mb-4 text-gray-300 dark:text-gray-700" />
             <p className="text-lg font-medium mb-2">No posts found</p>
             <p className="text-sm mb-6">You haven't created any posts matching your search.</p>
-            <Link 
-              to="/admin/posts/new" 
+            <Link
+              to="/admin/posts/new"
               className="bg-black text-white dark:bg-white dark:text-black px-6 py-2 rounded-full font-medium hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
             >
               Write a story

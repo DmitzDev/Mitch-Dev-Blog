@@ -16,23 +16,29 @@ export function BlogList() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
-    const fetchPosts = async () => {
+    const fetchPostsAndCats = async () => {
       try {
-        const postsQuery = query(ref(db, "posts"), orderByChild("publishedAt"));
-        const snapshot = await get(postsQuery);
+        const postsRef = query(ref(db, "posts"), orderByChild("publishedAt"));
+        const snapshot = await get(postsRef);
         if (snapshot.exists()) {
           const data = snapshot.val();
-          const list = Object.keys(data)
-            .map(k => ({ ...data[k], id: k }))
-            .reverse();
-          setPosts(list);
+          setPosts(Object.keys(data).map(k => ({ ...data[k], id: k })).reverse());
+        }
+
+        const catsRef = ref(db, "categories");
+        const catsSnap = await get(catsRef);
+        if (catsSnap.exists()) {
+          const raw = catsSnap.val();
+          setCategories(["All", ...Object.values(raw).map((c: any) => c.name)]);
+        } else {
+          setCategories(["All", "Technology", "Programming", "Travel", "Lifestyle", "Gaming"]);
         }
       } catch (e) { console.error(e); } finally { setLoading(false); }
     };
-    fetchPosts();
+    fetchPostsAndCats();
   }, []);
 
-  const categories = ["All", ...Array.from(new Set(posts.map(p => p.category)))];
+  const [categories, setCategories] = useState<string[]>(["All"]);
   const filtered = posts.filter(p => {
     const mCat = selectedCategory === "All" || p.category === selectedCategory;
     const mSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) || p.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
