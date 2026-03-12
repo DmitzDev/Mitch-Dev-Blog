@@ -1,162 +1,140 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
+import { ref, get, query, orderByChild, equalTo, limitToLast } from "firebase/database";
 import { db } from "../../firebase/config";
 import { useAuth } from "../../components/AuthProvider";
 import { Post } from "../../types";
 import { Helmet } from "react-helmet-async";
-import { FileText, Eye, Heart, MessageSquare, Plus } from "lucide-react";
+import { FileText, Eye, Heart, MessageSquare, Plus, ArrowUpRight } from "lucide-react";
+import { motion } from "framer-motion";
 
 export function Dashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState({
-    totalPosts: 0,
-    totalViews: 0,
-    totalLikes: 0,
-    totalComments: 0
-  });
+  const [stats, setStats] = useState({ totalPosts: 0, totalViews: 0, totalLikes: 0, totalComments: 0 });
   const [recentPosts, setRecentPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       if (!user) return;
-
       try {
-        const q = query(
-          collection(db, "posts"), 
-          where("authorId", "==", user.uid),
-          orderBy("createdAt", "desc")
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const posts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Post[];
-        
-        setStats({
-          totalPosts: posts.length,
-          totalViews: posts.reduce((acc, post) => acc + (post.views || 0), 0),
-          totalLikes: posts.reduce((acc, post) => acc + (post.likes || 0), 0),
-          totalComments: posts.reduce((acc, post) => acc + (post.comments || 0), 0)
-        });
+        // FAST QUERY: Order by authorId and filter on server
+        const postsQuery = query(ref(db, "posts"), orderByChild("authorId"), equalTo(user.uid));
+        const snapshot = await get(postsQuery);
 
-        setRecentPosts(posts.slice(0, 5));
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          const allPosts: Post[] = Object.keys(data)
+            .map(key => ({ ...data[key], id: key }))
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+          setStats({
+            totalPosts: allPosts.length,
+            totalViews: allPosts.reduce((acc, p) => acc + (p.views || 0), 0),
+            totalLikes: allPosts.reduce((acc, p) => acc + (p.likes || 0), 0),
+            totalComments: allPosts.reduce((acc, p) => acc + (p.comments || 0), 0)
+          });
+          setRecentPosts(allPosts.slice(0, 5));
+        }
       } catch (error) {
-        console.error("Error fetching dashboard data:", error);
+        console.error("Dashboard error:", error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchDashboardData();
   }, [user]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <Helmet>
-        <title>Dashboard - MitchDevBlog</title>
-      </Helmet>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <Helmet><title>Studio Dashboard | MDev.</title></Helmet>
 
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-serif font-bold text-gray-900 dark:text-white">
-          Dashboard Overview
-        </h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6">
+        <div>
+          <h1 className="text-4xl md:text-5xl font-serif font-black text-slate-900 dark:text-white">Studio.</h1>
+          <p className="text-slate-500 mt-2 font-medium italic">Welcome back, {user?.displayName || "Creator"}</p>
+        </div>
         <Link 
           to="/admin/posts/new" 
-          className="bg-black text-white dark:bg-white dark:text-black px-4 py-2 rounded-full font-medium flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors"
+          className="bg-primary text-white px-8 py-4 rounded-full font-black uppercase tracking-[0.2em] text-[10px] flex items-center gap-3 hover:scale-105 transition-transform shadow-xl shadow-primary/20"
         >
-          <Plus size={18} />
-          <span>New Post</span>
+          <Plus size={14} strokeWidth={3} /> New Story
         </Link>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm animate-pulse">
-              <div className="h-10 w-10 bg-gray-200 dark:bg-gray-800 rounded-full mb-4"></div>
-              <div className="h-6 bg-gray-200 dark:bg-gray-800 rounded w-1/2 mb-2"></div>
-              <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded w-1/3"></div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <StatCard icon={<FileText size={24} />} title="Total Posts" value={stats.totalPosts} color="bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400" />
-          <StatCard icon={<Eye size={24} />} title="Total Views" value={stats.totalViews} color="bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400" />
-          <StatCard icon={<Heart size={24} />} title="Total Likes" value={stats.totalLikes} color="bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400" />
-          <StatCard icon={<MessageSquare size={24} />} title="Comments" value={stats.totalComments} color="bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400" />
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+        <StatCard title="Insights" value={stats.totalPosts} icon={<FileText />} color="text-blue-500" delay={0.1} />
+        <StatCard title="Views" value={stats.totalViews} icon={<Eye />} color="text-emerald-500" delay={0.2} />
+        <StatCard title="Appreciation" value={stats.totalLikes} icon={<Heart />} color="text-rose-500" delay={0.3} />
+        <StatCard title="Discussions" value={stats.totalComments} icon={<MessageSquare />} color="text-violet-500" delay={0.4} />
+      </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-          <h2 className="text-xl font-bold font-serif text-gray-900 dark:text-white">Recent Posts</h2>
-          <Link to="/admin/posts" className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors">
-            View all
-          </Link>
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden">
+        <div className="px-10 py-8 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
+          <h2 className="text-2xl font-serif font-black text-slate-900 dark:text-white">Recent Artifacts</h2>
+          <Link to="/admin/posts" className="text-xs font-black uppercase tracking-widest text-primary hover:underline">View Ledger</Link>
         </div>
         
-        {loading ? (
-          <div className="p-6 space-y-4">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="h-16 bg-gray-100 dark:bg-gray-800 rounded animate-pulse"></div>
-            ))}
-          </div>
-        ) : recentPosts.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
-              <thead className="bg-gray-50 dark:bg-gray-800/50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Title</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+        <div className="overflow-x-auto">
+          {loading ? (
+            <div className="p-10 space-y-4 animate-pulse">
+              {[1, 2, 3].map(i => <div key={i} className="h-20 bg-slate-50 dark:bg-slate-800/50 rounded-2xl" />)}
+            </div>
+          ) : recentPosts.length > 0 ? (
+            <table className="w-full text-left">
+              <thead>
+                <tr className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 border-b border-slate-50 dark:border-slate-800">
+                  <th className="px-10 py-6">Identity</th>
+                  <th className="px-10 py-6">Publication</th>
+                  <th className="px-10 py-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                 {recentPosts.map((post) => (
-                  <tr key={post.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{post.title}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{post.category}</div>
+                  <tr key={post.id} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors">
+                    <td className="px-10 py-8">
+                      <div className="font-serif font-black text-lg text-slate-900 dark:text-white group-hover:text-primary transition-colors">{post.title}</div>
+                      <div className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{post.category}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                        Published
-                      </span>
+                    <td className="px-10 py-8 text-sm font-medium text-slate-400">
+                      {new Date(post.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {new Date(post.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link to={`/admin/posts/${post.id}/edit`} className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-4">Edit</Link>
-                      <Link to={`/blog/${post.slug}`} className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300">View</Link>
+                    <td className="px-10 py-8 text-right">
+                      <div className="flex justify-end gap-6 text-xs font-black uppercase tracking-widest">
+                        <Link to={`/admin/posts/${post.id}/edit`} className="text-slate-400 hover:text-primary transition-colors">Edit</Link>
+                        <Link to={`/blog/${post.slug}`} className="text-slate-400 hover:text-primary transition-colors flex items-center gap-1">Live <ArrowUpRight size={12} /></Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        ) : (
-          <div className="p-12 text-center text-gray-500 dark:text-gray-400">
-            You haven't published any posts yet.
-          </div>
-        )}
+          ) : (
+            <div className="p-20 text-center">
+              <p className="font-serif text-xl text-slate-300 italic">No artifacts published yet.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function StatCard({ icon, title, value, color }: { icon: React.ReactNode, title: string, value: number, color: string }) {
+function StatCard({ title, value, icon, color, delay }: any) {
   return (
-    <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex items-center gap-4">
-      <div className={`p-4 rounded-xl ${color}`}>
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.5 }}
+      className="bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-100 dark:shadow-none flex items-center gap-6"
+    >
+      <div className={`p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 ${color}`}>
         {icon}
       </div>
       <div>
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
-        <p className="text-3xl font-bold text-gray-900 dark:text-white">{value}</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">{title}</p>
+        <p className="text-4xl font-serif font-black text-slate-900 dark:text-white">{value.toLocaleString()}</p>
       </div>
-    </div>
+    </motion.div>
   );
 }

@@ -1,22 +1,21 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getDatabase } from "firebase/database";
 import { getStorage } from "firebase/storage";
 
+// Hardcoded for maximum reliability on all platforms (localhost + web.app)
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "mock-api-key",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "mock-auth-domain",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "mock-project-id",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "mock-storage-bucket",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "mock-sender-id",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "mock-app-id"
+  apiKey: "AIzaSyDc6gPGSziFBd1yfLyqhl2TyoovF2rw4-c",
+  authDomain: "mitch-dev-blog.firebaseapp.com",
+  projectId: "mitch-dev-blog",
+  storageBucket: "mitch-dev-blog.firebasestorage.app",
+  messagingSenderId: "421149832449",
+  appId: "1:421149832449:web:96f2bbe7033e01d7735700",
+  databaseURL: "https://mitch-dev-blog-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firebase services
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = getDatabase(app);
 export const storage = getStorage(app);
-

@@ -1,0 +1,32 @@
+{
+  "rules": {
+    "posts": {
+      ".read": true,
+      ".indexOn": ["authorId", "slug", "publishedAt", "createdAt"],
+      "$postId": {
+        ".write": "auth != null && (!data.exists() || data.child('authorId').val() == auth.uid)",
+        "likes": { ".write": "auth != null" },
+        "comments": { ".write": "auth != null" },
+        "views": { ".write": true }
+      }
+    },
+    // Bagong node para sa pag-track ng unique views
+    "unique_views": {
+      "$postId": {
+        ".read": true,
+        "$userId": {
+          // Ang user lang na yun ang pwedeng mag-marka na "viewed" na niya
+          ".write": "auth != null && auth.uid == $userId"
+        }
+      }
+    },
+    "comments": {
+      ".read": true,
+      ".indexOn": ["postId"],
+      "$commentId": {
+        ".write": "auth != null",
+        ".validate": "newData.hasChildren(['postId', 'userId', 'content', 'createdAt'])"
+      }
+    }
+  }
+}

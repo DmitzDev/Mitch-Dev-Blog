@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { collection, query, where, getDocs, orderBy, deleteDoc, doc } from "firebase/firestore";
+import { ref, get, remove } from "firebase/database";
 import { db } from "../../firebase/config";
 import { useAuth } from "../../components/AuthProvider";
 import { Post } from "../../types";
@@ -22,15 +22,19 @@ export function ManagePosts() {
     if (!user) return;
 
     try {
-      const q = query(
-        collection(db, "posts"), 
-        where("authorId", "==", user.uid),
-        orderBy("createdAt", "desc")
-      );
-      
-      const querySnapshot = await getDocs(q);
-      const postsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Post[];
-      setPosts(postsData);
+      const postsRef = ref(db, "posts");
+      const snapshot = await get(postsRef);
+
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const postsData: Post[] = Object.keys(data)
+          .map(key => ({ ...data[key], id: key }))
+          .filter((post: Post) => post.authorId === user.uid)
+          .sort((a: Post, b: Post) => (b.createdAt || 0) - (a.createdAt || 0));
+        setPosts(postsData);
+      } else {
+        setPosts([]);
+      }
     } catch (error) {
       console.error("Error fetching posts:", error);
     } finally {
@@ -45,7 +49,8 @@ export function ManagePosts() {
 
     setDeletingId(id);
     try {
-      await deleteDoc(doc(db, "posts", id));
+      const postRef = ref(db, `posts/${id}`);
+      await remove(postRef);
       setPosts(posts.filter(post => post.id !== id));
     } catch (error) {
       console.error("Error deleting post:", error);
