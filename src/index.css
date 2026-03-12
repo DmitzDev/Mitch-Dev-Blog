@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+  --font-heading: "Playfair Display", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-primary: #1d4ed8;
+  --color-primary-dark: #1e3a8a;
+  --color-accent: #2563eb;
+  --color-background-off: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-dark: #0f172a;
+
+  --shadow-editorial: 0 4px 30px rgba(0, 0, 0, 0.03);
+  --shadow-editorial-hover: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+@layer base {
+  body {
+    @apply antialiased text-slate-900 bg-white dark:text-slate-100 dark:bg-[#020617] overflow-x-hidden selection:bg-primary/20 selection:text-primary;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading tracking-tight;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/50 dark:border-white/5;
+  }
+
+  .editorial-card {
+    @apply bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 shadow-[var(--shadow-editorial)] transition-all duration-500 hover:shadow-[var(--shadow-editorial-hover)];
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400;
+  }
+}
+
+/* Custom Prose Styles for Markdown */
+.prose {
+  @apply max-w-none font-sans;
+}
+
+.prose p {
+  @apply mb-8 text-lg leading-relaxed text-slate-700 dark:text-slate-300;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  @apply font-serif font-bold mt-12 mb-6 text-slate-900 dark:text-white capitalize leading-tight;
+}
+
+.prose h1 {
+  @apply text-5xl;
+}
+
+.prose h2 {
+  @apply text-4xl;
+}
+
+.prose h3 {
+  @apply text-3xl;
+}
+
+.prose a {
+  @apply text-primary dark:text-blue-400 underline underline-offset-4 decoration-primary/30 hover:decoration-primary transition-all;
+}
+
+.prose blockquote {
+  @apply border-l-2 border-primary pl-8 py-2 italic text-2xl font-serif text-slate-800 dark:text-slate-200 my-10 bg-slate-50 dark:bg-slate-900/50 rounded-r-xl;
+}
+
+.prose code {
+  @apply font-mono bg-slate-100 dark:bg-slate-800/50 px-1.5 py-0.5 rounded text-sm text-blue-600 dark:text-blue-400;
+}
+
+.prose pre {
+  @apply bg-slate-900 text-slate-100 p-6 rounded-2xl overflow-x-auto my-8 font-mono text-sm border border-slate-800;
+}
+
+.prose img {
+  @apply rounded-3xl my-12 w-full object-cover shadow-2xl;
+}
+
+.prose ul {
+  @apply list-disc pl-6 mb-8 space-y-2;
+}
+
+.prose ol {
+  @apply list-decimal pl-6 mb-8 space-y-2;
+}

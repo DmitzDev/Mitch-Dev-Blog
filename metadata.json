@@ -1,0 +1,5 @@
+{
+  "name": "Medium-Clone Blog",
+  "description": "A full-stack modern blog website with a powerful admin dashboard, complete CRUD functionality, and Firebase integration.",
+  "requestFramePermissions": []
+}
