@@ -6,6 +6,8 @@ import { useAuth } from "../../components/AuthProvider";
 import { ImageCropper } from "../../components/ImageCropper";
 import { Helmet } from "react-helmet-async";
 import slugify from "slugify";
+import { motion } from "framer-motion";
+import { ArrowLeft, Send, Sparkles, X } from "lucide-react";
 
 export function PostEditor() {
   const { id } = useParams<{ id: string }>();
@@ -18,7 +20,7 @@ export function PostEditor() {
   const [excerpt, setExcerpt] = useState("");
   const [category, setCategory] = useState("");
   const [tags, setTags] = useState("");
-  const [coverImage, setCoverImage] = useState(""); // This will now store the Base64 string directly
+  const [coverImage, setCoverImage] = useState("");
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEditing);
 
@@ -51,13 +53,9 @@ export function PostEditor() {
       const tagsArray = tags.split(",").map(t => t.trim()).filter(Boolean);
 
       const postData: any = {
-        title,
-        slug,
-        content,
-        excerpt,
-        category,
+        title, slug, content, excerpt, category,
         tags: tagsArray,
-        coverImage, // DIRECT BASE64 SAVE (NO STORAGE NEEDED)
+        coverImage,
         updatedAt: Date.now(),
       };
 
@@ -87,71 +85,86 @@ export function PostEditor() {
     }
   };
 
-  if (fetching) return <div className="min-h-screen flex items-center justify-center font-serif text-xl animate-pulse italic">Retrieving artifact...</div>;
+  if (fetching) return <div className="min-h-screen flex items-center justify-center font-serif text-3xl animate-pulse italic">Curating...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <Helmet><title>{isEditing ? "Edit" : "New"} Story | MDev.</title></Helmet>
+    <div className="max-w-5xl mx-auto px-6 py-24">
+      <Helmet><title>{isEditing ? "Edit" : "New"} Entry | MDev.</title></Helmet>
       
-      <div className="mb-12">
-        <h1 className="text-5xl font-serif font-black text-slate-900 dark:text-white leading-none tracking-tight">
-          {isEditing ? "Refine story." : "Build story."}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        className="flex items-center justify-between mb-16"
+      >
+        <button onClick={() => navigate(-1)} className="flex items-center gap-3 text-slate-400 hover:text-primary transition-colors font-black text-[10px] uppercase tracking-widest">
+          <ArrowLeft size={16} /> Back to Ledger
+        </button>
+        <h1 className="text-5xl font-serif font-black text-slate-900 dark:text-white tracking-tighter">
+          {isEditing ? "Refine Entry." : "New Entry."}
         </h1>
-      </div>
+      </motion.div>
 
-      <form onSubmit={handleSubmit} className="space-y-12">
-        <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-10 border border-slate-100 dark:border-slate-800 shadow-2xl shadow-slate-200/50 dark:shadow-none space-y-10">
-          <div>
-            <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400 mb-6 block">Visual Identity (Base64)</label>
-            <ImageCropper
-              initialImage={coverImage}
-              onCropComplete={(base64) => setCoverImage(base64)}
-            />
-          </div>
-
-          <div className="space-y-8">
-            <input
-              type="text" required value={title} onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-transparent border-none text-4xl md:text-5xl font-serif font-black text-slate-900 dark:text-white placeholder:text-slate-100 outline-none p-0"
-              placeholder="Thesis title..."
-            />
-            <textarea
-              required rows={2} value={excerpt} onChange={(e) => setExcerpt(e.target.value)}
-              className="w-full bg-transparent border-none text-xl font-serif italic text-slate-400 outline-none p-0 resize-none"
-              placeholder="The abstract hook..."
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-10 border-t border-slate-50 dark:border-slate-800">
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Category</label>
-              <input type="text" required value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800/50 rounded-2xl px-6 py-4 outline-none font-bold text-sm" placeholder="Domain..." />
+      <form onSubmit={handleSubmit} className="space-y-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+          {/* Main Controls */}
+          <div className="lg:col-span-8 space-y-12">
+            <div className="space-y-4">
+               <input
+                type="text" required value={title} onChange={(e) => setTitle(e.target.value)}
+                className="w-full bg-transparent border-none text-5xl md:text-7xl font-serif font-black text-slate-900 dark:text-white placeholder:text-slate-100 dark:placeholder:text-slate-800 outline-none p-0 leading-tight"
+                placeholder="Entry Title..."
+              />
+              <textarea
+                required rows={2} value={excerpt} onChange={(e) => setExcerpt(e.target.value)}
+                className="w-full bg-transparent border-none text-2xl font-serif italic text-slate-400 outline-none p-0 resize-none leading-relaxed"
+                placeholder="The narrative hook goes here..."
+              />
             </div>
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Tags</label>
-              <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-800/50 rounded-2xl px-6 py-4 outline-none font-bold text-sm" placeholder="Labels..." />
+
+            <div className="space-y-6">
+              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-primary flex items-center gap-3">
+                <Sparkles size={12} /> Manuscript Content
+              </label>
+              <textarea
+                required rows={20} value={content} onChange={(e) => setContent(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-slate-900/50 rounded-[2.5rem] px-10 py-10 outline-none font-mono text-sm leading-relaxed border border-slate-100 dark:border-slate-800 focus:ring-2 focus:ring-primary/20 transition-all text-slate-600 dark:text-slate-300"
+                placeholder="### Start writing your story in Markdown..."
+              />
             </div>
           </div>
 
-          <div className="pt-10">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 block">Manuscript</label>
-            <textarea
-              required rows={15} value={content} onChange={(e) => setContent(e.target.value)}
-              className="w-full bg-slate-50 dark:bg-slate-800/50 rounded-3xl px-8 py-8 outline-none font-mono text-sm leading-relaxed"
-              placeholder="Elaborate your thoughts..."
-            />
-          </div>
-        </div>
+          {/* Sidebar Metadata */}
+          <div className="lg:col-span-4 space-y-12">
+            <div className="space-y-6">
+              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400">Visual Artifact</label>
+              <ImageCropper
+                initialImage={coverImage}
+                onCropComplete={(base64) => setCoverImage(base64)}
+              />
+            </div>
 
-        <div className="flex justify-end items-center gap-8">
-          <button type="button" onClick={() => navigate("/admin/posts")} className="text-xs font-black uppercase tracking-widest text-slate-300 hover:text-slate-900">Abort</button>
-          
-          <button
-            type="submit" disabled={loading}
-            className="bg-primary text-white px-12 py-5 rounded-full font-black uppercase tracking-widest text-[10px] shadow-2xl shadow-primary/30 transition-all hover:bg-black dark:hover:bg-white dark:hover:text-black disabled:opacity-50"
-          >
-            {loading ? "Archiving..." : isEditing ? "Update Story" : "Seal & Publish"}
-          </button>
+            <div className="space-y-8 bg-slate-50/50 dark:bg-slate-900/50 p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800">
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">Category</label>
+                <input type="text" required value={category} onChange={(e) => setCategory(e.target.value)} className="w-full bg-white dark:bg-slate-800 rounded-2xl px-6 py-4 outline-none font-bold text-xs border border-slate-100 dark:border-slate-700/50" placeholder="e.g. Design" />
+              </div>
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">Tags</label>
+                <input type="text" value={tags} onChange={(e) => setTags(e.target.value)} className="w-full bg-white dark:bg-slate-800 rounded-2xl px-6 py-4 outline-none font-bold text-xs border border-slate-100 dark:border-slate-700/50" placeholder="tag1, tag2..." />
+              </div>
+              
+              <div className="pt-8 flex flex-col gap-4">
+                <button
+                  type="submit" disabled={loading}
+                  className="btn-primary-shimmer w-full py-5 text-sm uppercase font-black"
+                >
+                  <Send size={14} className={loading ? "animate-ping" : ""} /> {loading ? "Archiving..." : "Publish Entry"}
+                </button>
+                <button type="button" onClick={() => navigate(-1)} className="btn-ghost flex items-center justify-center gap-2">
+                  <X size={14} /> Discard Changes
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </form>
     </div>

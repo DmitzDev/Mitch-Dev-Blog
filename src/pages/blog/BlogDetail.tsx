@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { Helmet } from "react-helmet-async";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Heart, Share2, MessageCircle, Bookmark, ArrowLeft, Clock, User, Tag, Calendar } from "lucide-react";
+import { Heart, Share2, MessageCircle, Bookmark, ArrowLeft, Clock, BookmarkCheck, CornerDownRight, Sparkles } from "lucide-react";
 import { useAuth } from "../../components/AuthProvider";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -36,21 +36,16 @@ export function BlogDetail() {
           const postData = { ...data[postId], id: postId } as Post;
           setPost(postData);
 
-          // 🛡️ ADVANCED UNIQUE VIEW TRACKING (Account-Based)
           if (!hasCheckedView.current) {
             hasCheckedView.current = true;
-            
             if (user) {
-              // 1. Kung LOGGED IN, i-check sa Database (True Unique Account Tracking)
               const viewRef = ref(db, `unique_views/${postId}/${user.uid}`);
               const viewSnap = await get(viewRef);
-              
               if (!viewSnap.exists()) {
                 await runTransaction(ref(db, `posts/${postId}/views`), (curr) => (curr || 0) + 1);
                 await set(viewRef, true);
               }
             } else {
-              // 2. Kung GUEST, fallback sa LocalStorage (Browser Tracking)
               const storageKey = `g_viewed_${postId}`;
               if (!localStorage.getItem(storageKey)) {
                 await runTransaction(ref(db, `posts/${postId}/views`), (curr) => (curr || 0) + 1);
@@ -69,14 +64,10 @@ export function BlogDetail() {
             setComments(list);
           }
         }
-      } catch (error) {
-        console.error("Fetch error:", error);
-      } finally {
-        setLoading(false);
-      }
+      } catch (error) { console.error(error); } finally { setLoading(false); }
     };
     fetchPostAndComments();
-  }, [slug, user]); // React to auth state changes
+  }, [slug, user]);
 
   const handleLike = async () => {
     if (!user) { alert("Please login to react!"); return; }
@@ -104,61 +95,161 @@ export function BlogDetail() {
     } catch (err) { console.error(err); } finally { setSubmittingComment(false); }
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center font-serif text-2xl animate-pulse italic">Reading...</div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#020617]">
+      <div className="text-center space-y-4">
+        <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto" />
+        <p className="font-serif italic text-slate-400 animate-pulse">Retrieving Manuscript...</p>
+      </div>
+    </div>
+  );
+
   if (!post) return <div className="min-h-screen flex items-center justify-center font-serif text-2xl text-rose-500">Not found.</div>;
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#020617]">
-      <Helmet><title>{post.title} | MDev.</title></Helmet>
+      <Helmet><title>{post.title} | MDev Studio</title></Helmet>
       
-      <section className="relative h-[80vh] w-full overflow-hidden">
-        <motion.img initial={{ scale: 1.1 }} animate={{ scale: 1 }} transition={{ duration: 1.5 }} src={post.coverImage || "https://picsum.photos/1600/900"} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent" />
-        <div className="absolute inset-0 flex items-end justify-start px-8 pb-16 max-w-7xl mx-auto">
-          <div className="max-w-4xl space-y-6">
-            <span className="bg-primary text-white text-[10px] font-black uppercase tracking-[0.4em] px-4 py-1.5 rounded-sm">{post.category}</span>
-            <h1 className="text-6xl md:text-8xl font-serif font-black text-white leading-[1.1]">{post.title}</h1>
-            <div className="flex items-center gap-4 text-white/60 text-xs font-bold uppercase tracking-[0.2em]">
-              <span>{post.authorName}</span>
-              <span className="w-1 h-1 bg-white/20 rounded-full" />
-              <span>{format(new Date(post.publishedAt), 'MMMM d, yyyy')}</span>
+      <header className="relative h-[85vh] w-full overflow-hidden flex items-end">
+        <motion.img 
+          initial={{ scale: 1.2, opacity: 0 }} 
+          animate={{ scale: 1, opacity: 1 }} 
+          transition={{ duration: 1.8, ease: "easeOut" }} 
+          src={post.coverImage} 
+          className="absolute inset-0 w-full h-full object-cover" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-[#020617]/40 to-transparent" />
+        
+        <div className="max-w-7xl mx-auto px-8 pb-24 w-full relative z-10">
+          <motion.div 
+            initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 1 }}
+            className="max-w-4xl space-y-12"
+          >
+            <div className="flex items-center gap-6">
+              <span className="bg-primary/20 backdrop-blur-md text-primary text-[9px] font-black uppercase tracking-[0.5em] px-6 py-2 rounded-full border border-primary/20">
+                {post.category}
+              </span>
+              <span className="text-white/40 text-[9px] font-black uppercase tracking-[0.4em] flex items-center gap-2">
+                <Clock size={12} /> {Math.ceil(post.content.length / 1000)} MIN READ
+              </span>
             </div>
-          </div>
+            
+            <h1 className="text-7xl md:text-[8rem] font-serif font-black text-white leading-[0.9] tracking-tighter">
+              {post.title}
+            </h1>
+            
+            <div className="flex items-center gap-6 pt-10 border-t border-white/10">
+              <img src={`https://ui-avatars.com/api/?name=${post.authorName}&background=random`} className="w-12 h-12 rounded-full border-2 border-white/20" alt="" />
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-white">{post.authorName}</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mt-1">{format(new Date(post.publishedAt), 'MMMM dd, yyyy')}</p>
+              </div>
+            </div>
+          </motion.div>
         </div>
-      </section>
+      </header>
 
-      <div className="max-w-7xl mx-auto px-8 py-24 flex flex-col lg:flex-row gap-20">
-        <div className="lg:w-8/12">
-          <article className="prose prose-xl prose-slate dark:prose-invert max-w-none font-serif leading-relaxed">
+      <div className="max-w-7xl mx-auto px-8 py-32 grid grid-cols-1 lg:grid-cols-12 gap-24">
+        <div className="lg:col-span-8">
+          <article className="prose">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
           </article>
 
-          <div className="mt-24 pt-12 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
-            <button onClick={handleLike} className={`flex items-center gap-2 px-8 py-3 rounded-full border transition-all font-black text-xs uppercase tracking-widest ${liked ? 'bg-rose-50 text-rose-500 border-rose-100' : 'hover:bg-slate-50 text-slate-500 border-slate-100'}`}>
-              <Heart size={16} className={liked ? "fill-rose-500" : ""} /> {post.likes || 0}
-            </button>
+          <div className="mt-32 pt-16 border-t border-slate-50 dark:border-slate-800/50 flex flex-wrap items-center justify-between gap-12">
+            <div className="flex items-center gap-4">
+              <motion.button 
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                onClick={handleLike} 
+                className={`btn-primary px-12 py-5 shadow-2xl ${liked ? 'bg-rose-500 text-white' : ''}`}
+              >
+                <Heart size={18} className={liked ? "fill-white animate-pulse" : ""} /> 
+                <span className="ml-2">{post.likes || 0}</span>
+              </motion.button>
+              
+              <button className="w-16 h-16 rounded-full glass flex items-center justify-center text-slate-400 hover:text-primary transition-all">
+                <Share2 size={20} />
+              </button>
+              <button className="w-16 h-16 rounded-full glass flex items-center justify-center text-slate-400 hover:text-primary transition-all">
+                <Bookmark size={20} />
+              </button>
+            </div>
           </div>
 
-          <section className="mt-32 space-y-12">
-            <h3 className="text-4xl font-serif font-black text-slate-900 dark:text-white">Discussion.</h3>
+          {/* Discussions */}
+          <section className="mt-48 space-y-16">
+            <div className="space-y-4">
+              <span className="text-[10px] font-black uppercase tracking-[0.6em] text-primary flex items-center gap-3"><MessageCircle size={14} /> Discussions</span>
+              <h3 className="text-6xl font-serif font-black text-slate-900 dark:text-white leading-none">Voices.</h3>
+            </div>
+
             {user ? (
-              <form onSubmit={handleCommentSubmit} className="space-y-6">
-                <textarea value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Thoughts..." className="w-full p-8 bg-slate-50 dark:bg-slate-900 border-none rounded-[2rem] focus:ring-2 focus:ring-primary outline-none min-h-[150px]" />
-                <button disabled={submittingComment} className="bg-primary text-white px-10 py-4 rounded-full font-black uppercase tracking-widest text-[10px] disabled:opacity-30">Post</button>
+              <form onSubmit={handleCommentSubmit} className="space-y-8 premium-card p-12 bg-slate-50/50 dark:bg-slate-900/30">
+                <textarea 
+                  value={newComment} onChange={(e) => setNewComment(e.target.value)}
+                  placeholder="Share your perspective..."
+                  className="w-full p-0 bg-transparent border-b-2 border-slate-100 dark:border-slate-800 text-2xl font-serif italic text-slate-900 dark:text-white focus:border-primary outline-none transition-all min-h-[120px] pb-8"
+                />
+                <div className="flex justify-end">
+                  <button disabled={submittingComment || !newComment.trim()} className="btn-primary-shimmer px-12 py-5">
+                    {submittingComment ? "Archiving..." : "Post Reflection"}
+                  </button>
+                </div>
               </form>
             ) : (
-              <div className="p-12 bg-slate-50 dark:bg-slate-900 rounded-[2rem] text-center"><Link to="/login" className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-12 py-4 rounded-full font-black uppercase tracking-widest text-[10px]">Sign In to Discuss</Link></div>
+              <div className="p-20 premium-card text-center space-y-8 bg-slate-900 dark:bg-white text-white dark:text-slate-900">
+                <h4 className="text-4xl font-serif font-black italic">Join the intellectual discourse.</h4>
+                <Link to="/login" className="btn-primary-shimmer py-5 px-16 inline-flex border-2 border-white/20">Sign In to Continue</Link>
+              </div>
             )}
-            <div className="space-y-12 mt-20">
-              {comments.map((c) => (
-                <div key={c.id} className="pb-10 border-b border-slate-50 dark:border-slate-800">
-                  <div className="flex justify-between items-center mb-4"><span className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-xs">{c.userName}</span><span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{format(new Date(c.createdAt), 'MMM d')}</span></div>
-                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">{c.content}</p>
-                </div>
+
+            <div className="space-y-16 mt-24">
+              {comments.map((c, idx) => (
+                <motion.div 
+                  key={c.id} 
+                  initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }}
+                  className="group relative pb-16"
+                >
+                  <div className="flex items-start gap-8">
+                     <div className="w-14 h-14 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center font-black text-primary text-xs border border-slate-100 dark:border-slate-800">
+                        {c.userName.charAt(0)}
+                     </div>
+                     <div className="flex-1 space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="font-black text-slate-900 dark:text-white uppercase tracking-[0.2em] text-[10px]">{c.userName}</span>
+                          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">{format(new Date(c.createdAt), 'MMM d, yyyy')}</span>
+                        </div>
+                        <p className="text-xl text-slate-500 dark:text-slate-400 leading-relaxed font-serif italic opacity-80 select-all">"{c.content}"</p>
+                     </div>
+                  </div>
+                </motion.div>
               ))}
             </div>
           </section>
         </div>
+
+        <aside className="lg:col-span-4 space-y-16">
+          <div className="sticky top-32 space-y-16">
+             <div className="premium-card p-12 bg-primary text-white space-y-10 relative overflow-hidden group">
+                <Sparkles className="absolute -top-10 -right-10 w-48 h-48 opacity-10 rotate-12 group-hover:rotate-45 transition-transform duration-1000" />
+                <div className="relative z-10 space-y-6">
+                  <h3 className="text-4xl font-serif font-black leading-none">MDev<br/>Bulletin.</h3>
+                  <p className="text-primary-100 leading-relaxed italic opacity-80">Weekly architectural abstracts curated for the modern creator.</p>
+                  <div className="space-y-4">
+                    <input type="email" placeholder="Email Address" className="w-full bg-white/10 border border-white/20 rounded-2xl px-6 py-5 text-sm outline-none placeholder:text-white/40 focus:bg-white/20 transition-all font-bold" />
+                    <button className="btn-primary bg-white text-primary w-full py-5 text-[10px]">Enroll Now</button>
+                  </div>
+                </div>
+             </div>
+             
+             <div className="space-y-8 px-4">
+               <span className="text-[9px] font-black uppercase tracking-[0.5em] text-slate-400">Collaborate</span>
+               <p className="text-slate-400 font-medium italic text-sm leading-relaxed">Interested in contributing to the ledger? Reach out to our curation team.</p>
+               <button className="btn-ghost flex items-center gap-3 group/link p-0">
+                  Documentation <CornerDownRight size={14} className="group-hover/link:translate-x-1 group-hover/link:translate-y-[-1px] transition-transform" />
+               </button>
+             </div>
+          </div>
+        </aside>
       </div>
     </div>
   );
