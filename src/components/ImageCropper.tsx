@@ -11,7 +11,7 @@ export function ImageCropper({ initialImage, onCropComplete }: ImageCropperProps
   const [imgSrc, setImgSrc] = useState(initialImage || "");
   const [crop, setCrop] = useState<Crop>();
   const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
-  const [aspect] = useState<number>(16 / 9);
+  const [aspect] = useState<number>(1 / 1);
 
   // Kapag nag-select ng file
   function onSelectFile(e: React.ChangeEvent<HTMLInputElement>) {

@@ -160,7 +160,7 @@ export function Home() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-24">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-32">
             {recent.map((post, idx) => (
               <motion.article 
                 key={post.id}

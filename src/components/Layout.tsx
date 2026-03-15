@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export function Layout() {
   const location = useLocation();
-  
+  const isPostEditor = location.pathname.includes('/admin/posts/new') || location.pathname.includes('/edit');
+
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-[#020617] transition-colors duration-500 relative selection:bg-primary/20">
       {/* Dynamic Background Glows */}

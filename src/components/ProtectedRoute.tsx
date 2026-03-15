@@ -20,8 +20,8 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  // Not an admin
-  if (role !== 'admin') {
+  // Not authorized (must be admin or user)
+  if (role !== 'admin' && role !== 'user') {
     return <Navigate to="/" replace />;
   }
 

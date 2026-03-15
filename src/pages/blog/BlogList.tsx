@@ -109,7 +109,7 @@ export function BlogList() {
         </header>
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
             {[1, 2, 3, 4, 5, 6].map(i => (
               <div key={i} className="aspect-square bg-slate-50 dark:bg-slate-900/50 rounded-[3rem] animate-pulse" />
             ))}
@@ -117,7 +117,7 @@ export function BlogList() {
         ) : (
           <motion.div 
             layout
-            className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-24" : "space-y-12 max-w-4xl"}
+            className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-x-16 gap-y-32" : "space-y-12 max-w-4xl"}
           >
             <AnimatePresence mode="popLayout">
               {filtered.map((post) => (

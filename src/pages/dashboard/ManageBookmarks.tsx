@@ -50,16 +50,16 @@ export function ManageBookmarks() {
         <h1 className="text-8xl font-serif font-black text-slate-900 dark:text-white tracking-tighter italic">Saved.</h1>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
         <AnimatePresence>
           {loading ? (
-            [1, 2, 3].map(i => <div key={i} className="aspect-square bg-slate-50 dark:bg-slate-900/50 rounded-[3rem] animate-pulse" />)
+            [1, 2, 3, 4].map(i => <div key={i} className="aspect-square bg-slate-50 dark:bg-slate-900/50 rounded-[3rem] animate-pulse" />)
           ) : bookmarks.length > 0 ? bookmarks.map((b) => (
             <motion.div
               layout initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
               key={b.id} className="premium-card group relative flex flex-col h-full bg-white dark:bg-slate-900/50"
             >
-              <Link to={`/blog/${b.slug}`} className="block relative aspect-video overflow-hidden rounded-[2rem] m-4">
+              <Link to={`/blog/${b.slug}`} className="block relative aspect-square overflow-hidden rounded-[3.5rem] m-6">
                 <img src={b.coverImage} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-500" />
               </Link>
